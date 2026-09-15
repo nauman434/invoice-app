@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  FINAL
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime  @default(now())
+  invoices     Invoice[]
+  clients      Client[]
+}
+
+// Lightweight client record. It exists so autofill is fast and clients can
+// be renamed/cleaned up without rewriting history, but the "source of truth"
+// for what to prefill is still each client's most recent invoice.
+model Client {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  defaultRate   Decimal?  @db.Decimal(10, 2)
+  currency      String    @default("USD")
+  bankAccountTitle String?
+  bankSwiftCode    String?
+  bankIban         String?
+  bankName         String?
+  bankBranchCode   String?
+  bankAccountNumber String?
+  invoices      Invoice[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, name])
+}
+
+model Invoice {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId        String?
+  client          Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  invoiceNumber   String
+  status          InvoiceStatus @default(DRAFT)
+  periodLabel     String     // e.g. "Wellow · August 2026"
+  billedTo        String     // client display name at time of invoice
+  fromName        String
+  invoiceDate     DateTime
+  currency        String     @default("USD")
+  rate            Decimal    @db.Decimal(10, 2)
+
+  bankAccountTitle String?
+  bankSwiftCode    String?
+  bankIban         String?
+  bankName         String?
+  bankBranchCode   String?
+  bankAccountNumber String?
+
+  footerNote      String?    @default("Thank you!")
+
+  totalHours      Decimal    @db.Decimal(10, 2) @default(0)
+  totalAmount     Decimal    @db.Decimal(12, 2) @default(0)
+
+  categories      Category[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([userId, invoiceNumber])
+  @@index([userId, clientId])
+  @@index([userId, invoiceDate])
+  @@index([userId, status])
+}
+
+model Category {
+  id         String     @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int        @default(0)
+  lineItems  LineItem[]
+
+  subtotalHours Decimal  @db.Decimal(10, 2) @default(0)
+  subtotalAmount Decimal @db.Decimal(12, 2) @default(0)
+}
+
+model LineItem {
+  id           String   @id @default(cuid())
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  description  String
+  hours        Decimal  @db.Decimal(10, 2)
+  total        Decimal  @db.Decimal(12, 2)
+  isManualTotal Boolean @default(false) // true if total was overridden instead of hours * rate
+  sortOrder    Int      @default(0)
+}
