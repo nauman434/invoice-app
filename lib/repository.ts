@@ -71,11 +71,32 @@ export async function getInvoice(userId: string, id: string) {
   });
 }
 
+type InvoiceBaseData = {
+  clientId: string | null;
+  invoiceNumber: string;
+  status: "DRAFT" | "FINAL";
+  periodLabel: string;
+  billedTo: string;
+  fromName: string;
+  invoiceDate: Date;
+  currency: string;
+  rate: number;
+  bankAccountTitle: string | null;
+  bankSwiftCode: string | null;
+  bankIban: string | null;
+  bankName: string | null;
+  bankBranchCode: string | null;
+  bankAccountNumber: string | null;
+  footerNote: string;
+  totalHours: number;
+  totalAmount: number;
+};
+
 export async function saveInvoice(userId: string, input: InvoiceInput) {
   const { categories, totalHours, totalAmount } = computeTotals(input);
   const client = await upsertClientFromInvoice(userId, input);
 
-  const baseData: Record<string, unknown> = {
+  const baseData: InvoiceBaseData = {
     clientId: client.id,
     invoiceNumber: input.invoiceNumber,
     status: input.status ?? "DRAFT",
@@ -85,12 +106,12 @@ export async function saveInvoice(userId: string, input: InvoiceInput) {
     invoiceDate: new Date(input.invoiceDate),
     currency: input.currency,
     rate: input.rate,
-    bankAccountTitle: input.bankAccountTitle,
-    bankSwiftCode: input.bankSwiftCode,
-    bankIban: input.bankIban,
-    bankName: input.bankName,
-    bankBranchCode: input.bankBranchCode,
-    bankAccountNumber: input.bankAccountNumber,
+    bankAccountTitle: input.bankAccountTitle ?? null,
+    bankSwiftCode: input.bankSwiftCode ?? null,
+    bankIban: input.bankIban ?? null,
+    bankName: input.bankName ?? null,
+    bankBranchCode: input.bankBranchCode ?? null,
+    bankAccountNumber: input.bankAccountNumber ?? null,
     footerNote: input.footerNote ?? "Thank you!",
     totalHours,
     totalAmount,
