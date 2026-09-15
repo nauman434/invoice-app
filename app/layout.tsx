@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   description: "Personal invoice generator with history and analytics",
 };
 
+// Every page in this app depends on a live session check (auth) or search
+// params (invoice tabs/filters), so there's no genuinely static page here.
+// Forcing dynamic rendering app-wide avoids Next's static-generation bailout
+// errors (e.g. useSearchParams needing a Suspense boundary) without having
+// to wrap every consumer individually.
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
